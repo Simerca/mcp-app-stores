@@ -1,0 +1,9 @@
+{
+  "myapp": {
+    "appstore": { "appId": "1234567890" },
+    "playstore": { "packageName": "com.example.myapp" }
+  },
+  "another-app": {
+    "appstore": { "appId": "9876543210" }
+  }
+}

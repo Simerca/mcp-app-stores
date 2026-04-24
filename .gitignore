@@ -1,0 +1,23 @@
+node_modules/
+dist/
+
+# Credentials — never commit
+*.p8
+*-service-account.json
+service-account*.json
+*-firebase-adminsdk-*.json
+google-services*.json
+
+# Personal config (use apps.example.json as a template)
+apps.json
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# OS / editor
+.DS_Store
+*.log
+.vscode/
+.idea/
