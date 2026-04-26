@@ -6,6 +6,8 @@ import { AscClient } from "./client.js";
 import { registerTools } from "./tools.js";
 import { registerMediaTools } from "./media.js";
 import { registerSubmissionTools } from "./submission.js";
+import { registerReviewTools } from "./review.js";
+import { registerAppInfoTools } from "./appinfo.js";
 import { loadGpCredentials } from "./gp-auth.js";
 import { GpClient } from "./gp-client.js";
 import { registerGpTools } from "./gp-tools.js";
@@ -33,6 +35,8 @@ async function main() {
     registerTools(server, asc);
     registerMediaTools(server, asc);
     registerSubmissionTools(server, asc);
+    registerReviewTools(server, asc);
+    registerAppInfoTools(server, asc);
   }
   if (gp) {
     registerGpTools(server, gp);

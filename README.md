@@ -134,6 +134,7 @@ During dev without a build step:
 - `appstore_list_app_versions` — all versions, any state
 - `appstore_find_editable_version` — find the current PREPARE_FOR_SUBMISSION or rejected version — **call before editing**
 - `appstore_create_app_version` — create a new version to unlock editing
+- `appstore_update_version` — copyright, releaseType (MANUAL / AFTER_APPROVAL / SCHEDULED), earliestReleaseDate, versionString, usesIdfa
 
 **Version localizations (ASO copy)**
 - `appstore_list_version_localizations`, `appstore_get_version_localization`
@@ -143,6 +144,19 @@ During dev without a build step:
 **App-level metadata**
 - `appstore_list_app_info_localizations`
 - `appstore_update_app_info_localization` — name (30), subtitle (30), privacyPolicyUrl
+- `appstore_get_app_info` — read editable AppInfo (state, age rating, categories)
+- `appstore_update_app` — patches the App resource. Use it for `contentRightsDeclaration` (USES_THIRD_PARTY_CONTENT / DOES_NOT_USE_THIRD_PARTY_CONTENT)
+- `appstore_list_app_categories` — discover category IDs
+- `appstore_set_app_categories` — primary/secondary category + subcategories (single PATCH on the AppInfo)
+
+**Age rating**
+- `appstore_get_age_rating` — fetch the questionnaire ID + current answers
+- `appstore_update_age_rating` — answer the questionnaire (frequency enums, gambling, unrestrictedWebAccess, kidsAgeBand, …)
+
+**App Review Information**
+- `appstore_get_review_details` — read contact info, demo account, notes
+- `appstore_update_review_details` — create or patch review details (auto-creates if needed when `versionId` is given)
+- `appstore_list_review_attachments`, `appstore_upload_review_attachment` (screen recording, PDF, etc.), `appstore_delete_review_attachment`
 
 **Screenshots**
 - `appstore_list_screenshot_sets`, `appstore_create_screenshot_set` — one set per display type (APP_IPHONE_67, APP_IPAD_PRO_3GEN_129, …)
@@ -223,6 +237,8 @@ src/
   tools.ts          # appstore_* tools (apps, versions, localizations)
   media.ts          # appstore_* tools (screenshots, previews)
   submission.ts     # appstore_* tools (review submission)
+  review.ts         # appstore_* tools (App Review Information + attachments)
+  appinfo.ts        # appstore_* tools (categories, age rating, content rights)
   gp-auth.ts        # Google Play OAuth2 from service account
   gp-client.ts      # Play Publishing API client
   gp-tools.ts       # playstore_* tools

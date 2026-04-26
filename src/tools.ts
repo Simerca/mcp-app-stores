@@ -199,6 +199,58 @@ export function registerTools(server: McpServer, client: AscClient) {
   );
 
   server.registerTool(
+    "appstore_update_version",
+    {
+      description:
+        "Update version-level fields on an editable App Store version: copyright (e.g. '2026 Acme Inc.'), releaseType (MANUAL, AFTER_APPROVAL, SCHEDULED), earliestReleaseDate (ISO 8601), versionString, usesIdfa.",
+      inputSchema: {
+        versionId: z.string(),
+        copyright: z
+          .string()
+          .max(100)
+          .optional()
+          .describe("Copyright text, e.g. '2026 Acme Inc.'"),
+        releaseType: z
+          .enum(["MANUAL", "AFTER_APPROVAL", "SCHEDULED"])
+          .optional(),
+        earliestReleaseDate: z
+          .string()
+          .optional()
+          .describe(
+            "ISO 8601 datetime, only when releaseType is SCHEDULED (e.g. 2026-05-01T08:00:00-07:00)",
+          ),
+        versionString: z
+          .string()
+          .regex(/^\d+(\.\d+){1,2}$/)
+          .optional(),
+        usesIdfa: z.boolean().optional(),
+      },
+    },
+    async ({ versionId, ...rest }) => {
+      const attrs = pruneUndefined(rest);
+      if (Object.keys(attrs).length === 0) {
+        throw new Error("Provide at least one field to update.");
+      }
+      const data = await client.patch<{ data: any }>(
+        `/appStoreVersions/${versionId}`,
+        {
+          data: {
+            type: "appStoreVersions",
+            id: versionId,
+            attributes: attrs,
+          },
+        },
+      );
+      return text({
+        id: data.data.id,
+        versionString: data.data.attributes.versionString,
+        state: data.data.attributes.appStoreState,
+        updated: Object.keys(attrs),
+      });
+    },
+  );
+
+  server.registerTool(
     "appstore_list_version_localizations",
     {
       description:
