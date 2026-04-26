@@ -59,31 +59,53 @@ const ageRatingFields = {
   violenceCartoonOrFantasy: z.enum(FREQUENCY).optional(),
   violenceRealistic: z.enum(FREQUENCY).optional(),
   violenceRealisticProlongedGraphicOrSadistic: z.enum(FREQUENCY).optional(),
-  // Newer fields (Apple 2024+ schema) — all booleans per Apple's current API.
+  // Newer fields (Apple 2024+ schema). Apple's API expects booleans for
+  // most of these, but downstream clients sometimes cache an older schema
+  // that declared them as strings — accept both and coerce to boolean here.
   advertising: z
-    .boolean()
+    .union([z.boolean(), z.string()])
     .optional()
-    .describe("True if the app shows advertising."),
+    .transform((v) =>
+      typeof v === "string" ? v.toLowerCase() === "true" : v,
+    )
+    .describe("True if the app shows advertising. (Apple expects boolean.)"),
   ageAssurance: z
-    .boolean()
+    .union([z.boolean(), z.string()])
     .optional()
-    .describe("True if the app implements age assurance / age verification."),
+    .transform((v) =>
+      typeof v === "string" ? v.toLowerCase() === "true" : v,
+    )
+    .describe(
+      "True if the app implements age assurance / age verification. (Apple expects boolean.)",
+    ),
   gunsOrOtherWeapons: z
-    .boolean()
+    .enum(FREQUENCY)
     .optional()
-    .describe("True if the app contains weapons content."),
+    .describe(
+      "Frequency: NONE | INFREQUENT_OR_MILD | FREQUENT_OR_INTENSE. Apple keeps this as a frequency enum (unlike advertising/messagingAndChat/etc which became booleans).",
+    ),
   healthOrWellnessTopics: z
-    .boolean()
+    .union([z.boolean(), z.string()])
     .optional()
-    .describe("True if the app discusses health or wellness topics."),
+    .transform((v) =>
+      typeof v === "string" ? v.toLowerCase() === "true" : v,
+    )
+    .describe(
+      "True if the app discusses health or wellness topics. (Apple expects boolean.)",
+    ),
   lootBox: z
     .boolean()
     .optional()
     .describe("True if the app contains loot boxes."),
   messagingAndChat: z
-    .boolean()
+    .union([z.boolean(), z.string()])
     .optional()
-    .describe("True if the app provides messaging or chat features."),
+    .transform((v) =>
+      typeof v === "string" ? v.toLowerCase() === "true" : v,
+    )
+    .describe(
+      "True if the app provides messaging or chat features. (Apple expects boolean.)",
+    ),
   parentalControls: z
     .boolean()
     .optional()

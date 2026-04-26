@@ -8,6 +8,7 @@ import { registerMediaTools } from "./media.js";
 import { registerSubmissionTools } from "./submission.js";
 import { registerReviewTools } from "./review.js";
 import { registerAppInfoTools } from "./appinfo.js";
+import { registerPricingTools } from "./pricing.js";
 import { loadGpCredentials } from "./gp-auth.js";
 import { GpClient } from "./gp-client.js";
 import { registerGpTools } from "./gp-tools.js";
@@ -37,6 +38,12 @@ async function main() {
     registerSubmissionTools(server, asc);
     registerReviewTools(server, asc);
     registerAppInfoTools(server, asc);
+    registerPricingTools(server, asc);
+    // Privacy Nutrition Label is NOT exposed via the public ASC REST API —
+    // every probed endpoint (appDataUsages, appPrivacyDetails, etc.) returns
+    // 404. Apple only allows editing it through the App Store Connect web UI
+    // or via session-cookie scrapers like fastlane's Spaceship. The previous
+    // privacy tools called phantom paths and have been removed.
   }
   if (gp) {
     registerGpTools(server, gp);

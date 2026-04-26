@@ -153,6 +153,17 @@ During dev without a build step:
 - `appstore_get_age_rating` — fetch the questionnaire ID + current answers
 - `appstore_update_age_rating` — answer the questionnaire (frequency enums, gambling, unrestrictedWebAccess, kidsAgeBand, …)
 
+**Privacy Nutrition Label**
+- `appstore_list_data_usages` — current data-usage declarations
+- `appstore_delete_data_usage` — remove one declaration
+- `appstore_get_data_usage_publish_state` / `appstore_publish_data_usages` — manage published state
+- `appstore_declare_no_data_collected` — one-shot helper for apps that collect zero data: deletes all declarations + publishes
+
+**Pricing**
+- `appstore_list_price_points` — discover tier IDs + customer prices for a territory (default USA). The tier with `customerPrice: "0.00"` is the FREE tier.
+- `appstore_get_app_price_schedule` — current schedule (base territory, manual + automatic prices)
+- `appstore_set_app_price` — create a new schedule with a chosen tier (immediate or `startDate`-scheduled)
+
 **App Review Information**
 - `appstore_get_review_details` — read contact info, demo account, notes
 - `appstore_update_review_details` — create or patch review details (auto-creates if needed when `versionId` is given)
@@ -239,6 +250,8 @@ src/
   submission.ts     # appstore_* tools (review submission)
   review.ts         # appstore_* tools (App Review Information + attachments)
   appinfo.ts        # appstore_* tools (categories, age rating, content rights)
+  pricing.ts        # appstore_* tools (price points, schedules)
+  privacy.ts        # appstore_* tools (Privacy Nutrition Label)
   gp-auth.ts        # Google Play OAuth2 from service account
   gp-client.ts      # Play Publishing API client
   gp-tools.ts       # playstore_* tools
