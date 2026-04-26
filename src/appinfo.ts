@@ -59,41 +59,31 @@ const ageRatingFields = {
   violenceCartoonOrFantasy: z.enum(FREQUENCY).optional(),
   violenceRealistic: z.enum(FREQUENCY).optional(),
   violenceRealisticProlongedGraphicOrSadistic: z.enum(FREQUENCY).optional(),
-  // Newer fields (Apple 2024+ schema) — typed loosely so we don't need to
-  // re-ship the MCP every time Apple flips a field between string/boolean.
-  // Currently observed: some are booleans (advertising, messagingAndChat,
-  // ageAssurance, healthOrWellnessTopics), others are frequency strings
-  // (gunsOrOtherWeapons). Pass whichever Apple's API expects today.
+  // Newer fields (Apple 2024+ schema) — all booleans per Apple's current API.
   advertising: z
-    .union([z.string(), z.boolean()])
+    .boolean()
     .optional()
-    .describe(
-      "Either a frequency (NONE | INFREQUENT_OR_MILD | FREQUENT_OR_INTENSE) or a boolean — Apple's API has shifted between the two.",
-    ),
-  gunsOrOtherWeapons: z
-    .union([z.string(), z.boolean()])
-    .optional()
-    .describe("Frequency string or boolean."),
-  healthOrWellnessTopics: z
-    .union([z.string(), z.boolean()])
-    .optional()
-    .describe("Frequency string or boolean."),
+    .describe("True if the app shows advertising."),
   ageAssurance: z
-    .union([z.string(), z.boolean()])
+    .boolean()
     .optional()
-    .describe(
-      "Either an age assurance method (NOT_APPLICABLE, BIOMETRIC, GOVERNMENT_ID, ...) or a boolean. Apple's API alternates.",
-    ),
+    .describe("True if the app implements age assurance / age verification."),
+  gunsOrOtherWeapons: z
+    .boolean()
+    .optional()
+    .describe("True if the app contains weapons content."),
+  healthOrWellnessTopics: z
+    .boolean()
+    .optional()
+    .describe("True if the app discusses health or wellness topics."),
   lootBox: z
     .boolean()
     .optional()
     .describe("True if the app contains loot boxes."),
   messagingAndChat: z
-    .union([z.string(), z.boolean()])
+    .boolean()
     .optional()
-    .describe(
-      "Common string values: NONE, MODERATED, UNMODERATED — but Apple may also expect a boolean today.",
-    ),
+    .describe("True if the app provides messaging or chat features."),
   parentalControls: z
     .boolean()
     .optional()
