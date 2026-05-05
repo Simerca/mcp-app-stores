@@ -251,6 +251,90 @@ export function registerTools(server: McpServer, client: AscClient) {
   );
 
   server.registerTool(
+    "appstore_list_builds",
+    {
+      description:
+        "List builds available for an app (those uploaded via Xcode, Transporter, fastlane, Codemagic, etc.). Use the returned build ID with appstore_attach_build to bind a build to an editable version. Sorted newest-first.",
+      inputSchema: {
+        appId: z.string(),
+        platform: z.enum(PLATFORMS).optional(),
+        preReleaseVersion: z
+          .string()
+          .optional()
+          .describe(
+            "Filter by semantic pre-release version, e.g. '1.0' (matches builds whose version string is 1.0).",
+          ),
+        processingState: z
+          .enum(["PROCESSING", "FAILED", "INVALID", "VALID"])
+          .optional(),
+        limit: z.number().int().min(1).max(200).optional(),
+      },
+    },
+    async ({ appId, platform, preReleaseVersion, processingState, limit }) => {
+      const query: Record<string, string | number> = {
+        "filter[app]": appId,
+        "fields[builds]":
+          "version,uploadedDate,expirationDate,processingState,usesNonExemptEncryption,minOsVersion,iconAssetToken",
+        include: "preReleaseVersion",
+        sort: "-uploadedDate",
+        limit: limit ?? 25,
+      };
+      if (platform) query["filter[preReleaseVersion.platform]"] = platform;
+      if (preReleaseVersion)
+        query["filter[preReleaseVersion.version]"] = preReleaseVersion;
+      if (processingState) query["filter[processingState]"] = processingState;
+
+      const data = await client.get<{ data: any[]; included?: any[] }>(
+        "/builds",
+        query,
+      );
+      const preById = new Map<string, any>();
+      for (const inc of data.included ?? []) {
+        if (inc.type === "preReleaseVersions") preById.set(inc.id, inc);
+      }
+      return text(
+        data.data.map((b) => {
+          const prId = b.relationships?.preReleaseVersion?.data?.id;
+          const pr = prId ? preById.get(prId) : null;
+          return {
+            id: b.id,
+            buildNumber: b.attributes.version,
+            preReleaseVersion: pr?.attributes?.version,
+            platform: pr?.attributes?.platform,
+            uploadedDate: b.attributes.uploadedDate,
+            expirationDate: b.attributes.expirationDate,
+            processingState: b.attributes.processingState,
+            minOsVersion: b.attributes.minOsVersion,
+            usesNonExemptEncryption: b.attributes.usesNonExemptEncryption,
+          };
+        }),
+      );
+    },
+  );
+
+  server.registerTool(
+    "appstore_attach_build",
+    {
+      description:
+        "Attach a build (uploaded via Xcode/Transporter/fastlane/etc.) to an editable App Store version. Discover build IDs via appstore_list_builds. Pass build=null to detach.",
+      inputSchema: {
+        versionId: z.string(),
+        buildId: z
+          .string()
+          .nullable()
+          .describe("Build ID to attach, or null to detach the current build."),
+      },
+    },
+    async ({ versionId, buildId }) => {
+      await client.patch(
+        `/appStoreVersions/${versionId}/relationships/build`,
+        { data: buildId === null ? null : { type: "builds", id: buildId } },
+      );
+      return text({ versionId, buildId, attached: buildId !== null });
+    },
+  );
+
+  server.registerTool(
     "appstore_list_version_localizations",
     {
       description:

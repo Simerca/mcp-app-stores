@@ -135,6 +135,8 @@ During dev without a build step:
 - `appstore_find_editable_version` — find the current PREPARE_FOR_SUBMISSION or rejected version — **call before editing**
 - `appstore_create_app_version` — create a new version to unlock editing
 - `appstore_update_version` — copyright, releaseType (MANUAL / AFTER_APPROVAL / SCHEDULED), earliestReleaseDate, versionString, usesIdfa
+- `appstore_list_builds` — uploaded builds for an app (newest first), filterable by platform / preReleaseVersion / processingState
+- `appstore_attach_build` — bind a build (uploaded via Xcode/Transporter/fastlane) to an editable App Store version (or detach with `buildId: null`)
 
 **Version localizations (ASO copy)**
 - `appstore_list_version_localizations`, `appstore_get_version_localization`
@@ -188,6 +190,8 @@ During dev without a build step:
 - `playstore_list_images`, `playstore_upload_image`, `playstore_delete_image`, `playstore_delete_all_images` — icon, feature graphic, phone/tablet/TV/wearable screenshots
 - `playstore_list_tracks`, `playstore_get_track` — production, beta, alpha, custom
 - `playstore_update_release_notes`, `playstore_set_rollout` — staged rollout fraction, halt, resume
+- `playstore_publish_bundle` — upload an `.aab` and push it to a track in one shot (creates edit, uploads, updates track, commits)
+- `playstore_publish_apk` — same flow for legacy APK distribution
 
 ### Unified
 

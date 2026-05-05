@@ -404,4 +404,223 @@ export function registerGpTools(server: McpServer, client: GpClient) {
       return text({ track, userFraction, status, result });
     },
   );
+
+  const releaseStatusEnum = z.enum([
+    "completed",
+    "draft",
+    "halted",
+    "inProgress",
+  ]);
+
+  const releaseNotesSchema = z
+    .array(
+      z.object({
+        language: z.string().describe("BCP-47 language tag, e.g. en-US"),
+        text: z.string().max(500),
+      }),
+    )
+    .optional()
+    .describe("Localized release notes, max 500 chars per language.");
+
+  async function uploadBinary(
+    packageName: string,
+    editId: string,
+    binaryPath: string,
+    kind: "bundles" | "apks",
+    extraQuery?: Record<string, string | boolean>,
+  ): Promise<{ versionCode: number; sha1?: string; sha256?: string }> {
+    const resolved = expandPath(binaryPath);
+    statSync(resolved); // throws if missing
+    const buffer = readFileSync(resolved);
+    const result = await client.request<any>(
+      "POST",
+      `/applications/${packageName}/edits/${editId}/${kind}`,
+      {
+        rawBody: buffer,
+        contentType: "application/octet-stream",
+        upload: true,
+        query: { uploadType: "media", ...(extraQuery ?? {}) },
+      },
+    );
+    return {
+      versionCode: result.versionCode,
+      sha1: result.sha1,
+      sha256: result.sha256,
+    };
+  }
+
+  function buildRelease(opts: {
+    versionCode: number;
+    releaseName?: string;
+    releaseStatus: z.infer<typeof releaseStatusEnum>;
+    userFraction?: number;
+    releaseNotes?: Array<{ language: string; text: string }>;
+  }) {
+    const release: Record<string, unknown> = {
+      status: opts.releaseStatus,
+      versionCodes: [String(opts.versionCode)],
+    };
+    if (opts.releaseName) release.name = opts.releaseName;
+    if (opts.releaseStatus === "inProgress" && opts.userFraction !== undefined) {
+      release.userFraction = opts.userFraction;
+    }
+    if (opts.releaseNotes && opts.releaseNotes.length > 0) {
+      release.releaseNotes = opts.releaseNotes;
+    }
+    return release;
+  }
+
+  server.registerTool(
+    "playstore_publish_bundle",
+    {
+      description:
+        "Upload an Android App Bundle (.aab) and push it to a Play Console track in one shot. Creates an edit, uploads, updates the chosen track with a new release, and commits. Returns the assigned versionCode.",
+      inputSchema: {
+        packageName: z.string(),
+        bundlePath: z
+          .string()
+          .describe("Path to the .aab file. Supports ~/ expansion."),
+        track: z
+          .enum(TRACKS)
+          .default("internal")
+          .describe("Defaults to `internal` for safety on first publish."),
+        releaseName: z
+          .string()
+          .optional()
+          .describe("Free-form release name shown in Play Console."),
+        releaseStatus: releaseStatusEnum
+          .default("completed")
+          .describe(
+            "completed = full release, draft = saved but not published, inProgress = staged rollout (requires userFraction), halted = paused.",
+          ),
+        userFraction: z
+          .number()
+          .min(0)
+          .max(1)
+          .optional()
+          .describe(
+            "Staged rollout fraction (0-1). Only used when releaseStatus = inProgress.",
+          ),
+        releaseNotes: releaseNotesSchema,
+        changesNotSentForReview: z
+          .boolean()
+          .optional()
+          .describe(
+            "Commit without sending changes for review (useful when only updating non-reviewable assets).",
+          ),
+        ackBundleInstallationWarning: z
+          .boolean()
+          .optional()
+          .describe(
+            "Acknowledge any installation warnings (e.g. when uploading an unsigned debug bundle).",
+          ),
+      },
+    },
+    async ({
+      packageName,
+      bundlePath,
+      track,
+      releaseName,
+      releaseStatus,
+      userFraction,
+      releaseNotes,
+      changesNotSentForReview,
+      ackBundleInstallationWarning,
+    }) => {
+      const result = await client.withEdit(
+        packageName,
+        async (editId) => {
+          const upload = await uploadBinary(
+            packageName,
+            editId,
+            bundlePath,
+            "bundles",
+            ackBundleInstallationWarning
+              ? { ackBundleInstallationWarning: true }
+              : undefined,
+          );
+          const release = buildRelease({
+            versionCode: upload.versionCode,
+            releaseName,
+            releaseStatus,
+            userFraction,
+            releaseNotes,
+          });
+          await client.put(
+            `/applications/${packageName}/edits/${editId}/tracks/${track}`,
+            { track, releases: [release] },
+          );
+          return upload;
+        },
+        { commit: true, changesNotSentForReview },
+      );
+      return text({
+        packageName,
+        track,
+        releaseStatus,
+        versionCode: result.versionCode,
+        sha256: result.sha256,
+      });
+    },
+  );
+
+  server.registerTool(
+    "playstore_publish_apk",
+    {
+      description:
+        "Upload an APK and push it to a Play Console track in one shot. Same flow as playstore_publish_bundle but for legacy APK distribution.",
+      inputSchema: {
+        packageName: z.string(),
+        apkPath: z.string(),
+        track: z.enum(TRACKS).default("internal"),
+        releaseName: z.string().optional(),
+        releaseStatus: releaseStatusEnum.default("completed"),
+        userFraction: z.number().min(0).max(1).optional(),
+        releaseNotes: releaseNotesSchema,
+        changesNotSentForReview: z.boolean().optional(),
+      },
+    },
+    async ({
+      packageName,
+      apkPath,
+      track,
+      releaseName,
+      releaseStatus,
+      userFraction,
+      releaseNotes,
+      changesNotSentForReview,
+    }) => {
+      const result = await client.withEdit(
+        packageName,
+        async (editId) => {
+          const upload = await uploadBinary(
+            packageName,
+            editId,
+            apkPath,
+            "apks",
+          );
+          const release = buildRelease({
+            versionCode: upload.versionCode,
+            releaseName,
+            releaseStatus,
+            userFraction,
+            releaseNotes,
+          });
+          await client.put(
+            `/applications/${packageName}/edits/${editId}/tracks/${track}`,
+            { track, releases: [release] },
+          );
+          return upload;
+        },
+        { commit: true, changesNotSentForReview },
+      );
+      return text({
+        packageName,
+        track,
+        releaseStatus,
+        versionCode: result.versionCode,
+        sha1: result.sha1,
+      });
+    },
+  );
 }
